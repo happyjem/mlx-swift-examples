@@ -11,7 +11,7 @@ open class ProcessorTypeRegistry: @unchecked Sendable {
     }
 
     /// Creates a registry with given creators.
-    public init(creators: [String: @Sendable (URL, any Tokenizer) throws -> any UserInputProcessor])
+    public init(creators: [String: @MainActor @Sendable (URL, any Tokenizer) throws -> any UserInputProcessor])
     {
         self.creators = creators
     }
@@ -21,24 +21,24 @@ open class ProcessorTypeRegistry: @unchecked Sendable {
     // to remain synchronous.
     private let lock = NSLock()
 
-    private var creators: [String: @Sendable (URL, any Tokenizer) throws -> any UserInputProcessor]
+    private var creators: [String: @MainActor @Sendable (URL, any Tokenizer) async throws -> any UserInputProcessor]
 
     /// Add a new model to the type registry.
     public func registerProcessorType(
         _ type: String,
-        creator: @Sendable @escaping (
+        creator: @MainActor @Sendable @escaping (
             URL,
             any Tokenizer
-        ) throws -> any UserInputProcessor
-    ) {
-        lock.withLock {
+        ) async throws -> any UserInputProcessor
+    ) async {
+        await MainActor.run {
             creators[type] = creator
         }
     }
 
     /// Given a `processorType` and configuration file instantiate a new `UserInputProcessor`.
     public func createModel(configuration: URL, processorType: String, tokenizer: any Tokenizer)
-        throws -> any UserInputProcessor
+        async throws -> any UserInputProcessor
     {
         let creator = lock.withLock {
             creators[processorType]
@@ -46,7 +46,7 @@ open class ProcessorTypeRegistry: @unchecked Sendable {
         guard let creator else {
             throw ModelFactoryError.unsupportedProcessorType(processorType)
         }
-        return try creator(configuration, tokenizer)
+        return try await creator(configuration, tokenizer)
     }
 
 }

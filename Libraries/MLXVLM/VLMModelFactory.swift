@@ -280,7 +280,7 @@ public class VLMModelFactory: ModelFactory {
                 processorConfigurationURL.lastPathComponent, configuration.name, error)
         }
 
-        let processor = try processorRegistry.createModel(
+        let processor = try await processorRegistry.createModel(
             configuration: processorConfigurationURL,
             processorType: baseProcessorConfig.processorClass, tokenizer: tokenizer)
 

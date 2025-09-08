@@ -10,7 +10,7 @@ open class ModelTypeRegistry: @unchecked Sendable {
     }
 
     /// Creates a registry with given creators.
-    public init(creators: [String: @Sendable (URL) throws -> any LanguageModel]) {
+    public init(creators: [String: @Sendable (URL) async throws -> any LanguageModel]) {
         self.creators = creators
     }
 
@@ -18,35 +18,33 @@ open class ModelTypeRegistry: @unchecked Sendable {
     // critical sections and expect no contention. this allows the methods
     // to remain synchronous.
     private let lock = NSLock()
-    public var creators: [String: @Sendable (URL) throws -> any LanguageModel]
+    public var creators: [String: @Sendable (URL) async throws -> any LanguageModel]
 
-    /// Add a new model to the type registry.
-    public func registerModelType(
-        _ type: String, creator: @Sendable @escaping (URL) throws -> any LanguageModel
-    ) {
-        lock.withLock {
-            creators[type] = creator
-        }
-    }
+//    /// Add a new model to the type registry.
+//    public func registerModelType(
+//        _ type: String, creator: @Sendable @escaping (URL) throws -> any LanguageModel
+//    ) {
+//        lock.withLock {
+//            creators[type] = creator
+//        }
+//    }
     
     /// Add a new model to the type registry.
     public func registerModelType(
-        _ type: String, creator: @Sendable @escaping (URL) throws -> any LanguageModel
+        _ type: String, creator: @Sendable @escaping (URL) async throws -> any LanguageModel
     ) async {
-        await MainActor.run {
-            creators[type] = creator
-        }
+        creators[type] = creator
     }
 
     /// Given a `modelType` and configuration file instantiate a new `LanguageModel`.
-    public func createModel(configuration: URL, modelType: String) throws -> LanguageModel {
+    public func createModel(configuration: URL, modelType: String) async throws -> LanguageModel {
         let creator = lock.withLock {
             creators[modelType]
         }
         guard let creator else {
             throw ModelFactoryError.unsupportedModelType(modelType)
         }
-        return try creator(configuration)
+        return try await creator(configuration)
     }
 
 }

@@ -248,7 +248,7 @@ public class VLMModelFactory: ModelFactory {
 
         let model: LanguageModel
         do {
-            model = try typeRegistry.createModel(
+            model = try await typeRegistry.createModel(
                 configuration: configurationURL, modelType: baseConfig.modelType)
         } catch let error as DecodingError {
             throw ModelFactoryError.configurationDecodingError(

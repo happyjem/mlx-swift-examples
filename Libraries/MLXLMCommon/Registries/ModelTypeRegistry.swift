@@ -18,13 +18,22 @@ open class ModelTypeRegistry: @unchecked Sendable {
     // critical sections and expect no contention. this allows the methods
     // to remain synchronous.
     private let lock = NSLock()
-    private var creators: [String: @Sendable (URL) throws -> any LanguageModel]
+    public var creators: [String: @Sendable (URL) throws -> any LanguageModel]
 
     /// Add a new model to the type registry.
     public func registerModelType(
         _ type: String, creator: @Sendable @escaping (URL) throws -> any LanguageModel
     ) {
         lock.withLock {
+            creators[type] = creator
+        }
+    }
+    
+    /// Add a new model to the type registry.
+    public func registerModelType(
+        _ type: String, creator: @Sendable @escaping (URL) throws -> any LanguageModel
+    ) async {
+        await MainActor.run {
             creators[type] = creator
         }
     }
